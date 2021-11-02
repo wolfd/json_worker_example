@@ -1,34 +1,13 @@
 from io import StringIO
 import json
-import select
 import os
 import sys
 import traceback
 
-# This is a pretty cumbersome way of getting work requests.
-# It waits for something to be available on stdin, and then tries parsing
-# whatever text is available as JSON. It keeps accumulating more text until a
-# full work request is available.
+# Simplified json loop with newline-delimited json.
 def wait_for_stdin_json():
-    stdin = open("/dev/stdin", "rb")
-    os.set_blocking(stdin.fileno(), False)
-    stream_bytes = b""
     while True:
-        _, _, _ = select.select([stdin.fileno()], [], [])
-        maybe_bytes = stdin.read()
-        if maybe_bytes is None:
-            continue
-        stream_bytes += maybe_bytes
-        try:
-            work_request = json.loads(stream_bytes)
-        except json.decoder.JSONDecodeError:
-            # stream couldn't decode, wait until next select
-            sys.stderr.write(f"failed to decode: {stream_bytes.decode('utf-8')}\n")
-            sys.stderr.flush()
-            continue
-
-        yield work_request
-        stream_bytes = b""  # reset
+        yield json.loads(sys.stdin.readline())
 
 
 def concat(input_paths, out_path):
